@@ -1,0 +1,58 @@
+name: Publish GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag (e.g. v1.9.12)"
+        required: true
+        default: "v1.9.12"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Python Wheel and Source Distribution
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --outdir dist/release
+          cd dist/release
+          sha256sum *.whl *.tar.gz > SHA256SUMS-python.txt
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          name: "PDFMathTranslate-UI ${{ github.event.inputs.tag_name || github.ref_name }}"
+          draft: false
+          prerelease: false
+          body: |
+            ## ✨ 新增功能与改进 (Highlights)
+            1. **原生跨平台桌面客户端 (PySide6 Desktop UI)**
+               - 内置 **24 种主流 AI 大模型与机器翻译服务商**可视化配置（DeepSeek、OpenAI、Gemini、阿里云百炼 Qwen-MT、硅基流动、智谱 GLM、ModelScope、Ollama 本地模型、自定义 OpenAI 兼容接口等），支持一键测试连接与设为默认。
+               - 内置 **高清双语/单语/原文三合一 PDF 阅读器**，支持拖拽批量导入 PDF / Word 文档、文件夹与在线论文链接（如 arXiv）。
+               - 内置 **交互式使用说明与常见问题指南 (User Guide)**。
+            2. **10 国语言界面实时无缝切换 (Real-time 10-Language UI)**
+               - 完整覆盖：**简体中文 (`zh`)**、**繁體中文 (`zh-TW`)**、**English (`en`)**、**日本語 (`ja`)**、**한국어 (`ko`)**、**Français (`fr`)**、**Deutsch (`de`)**、**Русский (`ru`)**、**Español (`es`)**、**Italiano (`it`)**。
+            3. **PDF 目录 (Table of Contents) 排版精准还原**
+               - 自动识别带引导点（`. . . . 42`）及宽间距目录行，逐行独立排版，动态裁剪/延展引导点并保持右侧页码原坐标精确对齐。
+            4. **跨页程序代码块防乱码与行号保护**
+               - 自动隔离跨页提示（`continued from previous page` / `continues on next page`），将带行号或语法高亮的程序代码行作为原子整体原位保留，彻底解决新页面程序代码混排乱码问题。
+          files: |
+            dist/release/*.whl
+            dist/release/*.tar.gz
+            dist/release/SHA256SUMS-python.txt
