@@ -1,0 +1,4 @@
+7fc56055f9beb4496e465b24cca2f7fed0c1fe36271f65179302b2f4c8cb6fdf  PDFMathTranslate-v1.9.12-macOS-arm64.dmg
+8dbd94b11676c8eab45d49faa6b7e95e3c8c94e05196dcb86147a1b2a8ee2ad9  PDFMathTranslate-v1.9.12-macOS-arm64.zip
+f145828cf8afa40a0170a201f7e5462f0495cd9c024f883e0fe8a90e54ce67e7  pdf2zh-1.9.12-py3-none-any.whl
+705afcd8a25af350827f5f72c7989f2de1d03f06c8e2e055a80dc71074afc289  pdf2zh-1.9.12.tar.gz
