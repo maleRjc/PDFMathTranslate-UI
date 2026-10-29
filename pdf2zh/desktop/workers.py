@@ -389,7 +389,7 @@ class TranslationQueueWorker(QThread):
         from babeldoc.main import create_progress_handler
         from babeldoc.translation_config import TranslationConfig as YadtConfig
         from pdf2zh.converter_docx import convert_to_pdf, is_convertible
-        from pdf2zh.high_level import download_remote_fonts
+        from pdf2zh.high_level import append_promo_to_pdf_file, download_remote_fonts
         from pdf2zh.translator import OpenAITranslator
 
         babeldoc_init()
@@ -465,6 +465,10 @@ class TranslationQueueWorker(QThread):
                     os.unlink(converted_pdf)
                 except OSError:
                     pass
+
+        for out_p in (mono_res, dual_res):
+            if out_p and os.path.exists(out_p):
+                append_promo_to_pdf_file(out_p, lang_out, font_path)
 
         return mono_res, dual_res
 

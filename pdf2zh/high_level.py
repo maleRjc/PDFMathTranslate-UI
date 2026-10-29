@@ -39,6 +39,180 @@ from pdf2zh.pdfinterp import PDFPageInterpreterEx
 from pdf2zh.config import ConfigManager
 
 NOTO_NAME = "noto"
+PROMO_URL = "https://www.aireadcode.com"
+
+PROMO_TEXT_MAP: dict[str, str] = {
+    "zh": "AI 帮你写代码，AiReadCode 帮你读懂代码。https://www.aireadcode.com",
+    "zh-cn": "AI 帮你写代码，AiReadCode 帮你读懂代码。https://www.aireadcode.com",
+    "zh-hans": "AI 帮你写代码，AiReadCode 帮你读懂代码。https://www.aireadcode.com",
+    "zh-sg": "AI 帮你写代码，AiReadCode 帮你读懂代码。https://www.aireadcode.com",
+    "zh-tw": "AI 幫你寫程式碼，AiReadCode 幫你讀懂程式碼。https://www.aireadcode.com",
+    "zh-hant": "AI 幫你寫程式碼，AiReadCode 幫你讀懂程式碼。https://www.aireadcode.com",
+    "zh-hk": "AI 幫你寫程式碼，AiReadCode 幫你讀懂程式碼。https://www.aireadcode.com",
+    "en": "AI writes code for you, AiReadCode helps you understand it. https://www.aireadcode.com",
+    "ja": "AI がコードを書き、AiReadCode がコードの理解を助けます。https://www.aireadcode.com",
+    "ko": "AI가 코드를 작성하고, AiReadCode가 코드 이해를 도와줍니다. https://www.aireadcode.com",
+    "fr": "L'IA écrit le code pour vous, AiReadCode vous aide à le comprendre. https://www.aireadcode.com",
+    "de": "KI schreibt den Code für Sie, AiReadCode hilft Ihnen, ihn zu verstehen. https://www.aireadcode.com",
+    "ru": "ИИ пишет код за вас, AiReadCode помогает его понять. https://www.aireadcode.com",
+    "es": "La IA escribe el código por ti, AiReadCode te ayuda a entenderlo. https://www.aireadcode.com",
+    "it": "L'IA scrive il codice per te, AiReadCode ti aiuta a capirlo. https://www.aireadcode.com",
+    "pt": "A IA escreve o código para você, o AiReadCode ajuda você a entendê-lo. https://www.aireadcode.com",
+    "ar": "الذكاء الاصطناعي يكتب الكود لك، و AiReadCode يساعدك على فهمه. https://www.aireadcode.com",
+}
+
+
+def get_promo_text(lang_out: str) -> str:
+    """Return the localized AiReadCode promotional footer text for target language."""
+    code = (lang_out or "zh").strip().lower().replace("_", "-")
+    if code in PROMO_TEXT_MAP:
+        return PROMO_TEXT_MAP[code]
+    if code.startswith("zh"):
+        if any(tag in code for tag in ("tw", "hant", "hk", "mo")):
+            return PROMO_TEXT_MAP["zh-tw"]
+        return PROMO_TEXT_MAP["zh"]
+    prefix = code.split("-", 1)[0]
+    if prefix in PROMO_TEXT_MAP:
+        return PROMO_TEXT_MAP[prefix]
+    return PROMO_TEXT_MAP["zh"]
+
+
+def _build_promo_ops(
+    page,
+    noto: Font,
+    noto_name: str,
+    lang_out: str,
+) -> tuple[str, tuple[float, float, float, float]]:
+    """Build PDF content stream operators and rect (in PyMuPDF top-down coords) for the promo footer."""
+    text = get_promo_text(lang_out)
+    # If font lacks non-ASCII glyphs (e.g. Latin-only test font), fall back to English promo text
+    if any(ord(c) > 127 and not noto.has_glyph(ord(c)) for c in text):
+        text = PROMO_TEXT_MAP["en"]
+
+    cbox = page.cropbox
+    page_w = float(cbox.width)
+    page_h = float(cbox.height)
+    x0_box = float(cbox.x0)
+    y0_box = float(cbox.y0)
+
+    fontsize = 8.5
+
+    def _measure(sz: float) -> float:
+        total = 0.0
+        for ch in text:
+            if noto.has_glyph(ord(ch)):
+                total += noto.char_lengths(ch, sz)[0]
+            else:
+                total += sz * 0.5
+        return total
+
+    est_w = _measure(fontsize)
+    avail_w = max(80.0, page_w - 24.0)
+    if est_w > avail_w and est_w > 0:
+        fontsize = max(5.5, fontsize * (avail_w / est_w) * 0.96)
+        est_w = _measure(fontsize)
+
+    start_x = x0_box + max(12.0, (page_w - est_w) / 2.0)
+    y_pdf = y0_box + 9.0
+
+    ops_parts: list[str] = []
+    cur_font: Optional[str] = None
+    cur_hex: list[str] = []
+    run_x = start_x
+    cur_x = start_x
+
+    def _flush() -> None:
+        nonlocal cur_hex
+        if cur_hex and cur_font:
+            rtxt = "".join(cur_hex)
+            ops_parts.append(
+                f"/{cur_font} {fontsize:f} Tf 1 0 0 1 {run_x:f} {y_pdf:f} Tm [<{rtxt}>] TJ "
+            )
+            cur_hex = []
+
+    for ch in text:
+        gid = noto.has_glyph(ord(ch))
+        if gid:
+            f_use = noto_name
+            h_val = "%04x" % gid
+            adv = noto.char_lengths(ch, fontsize)[0]
+        else:
+            f_use = "tiro"
+            c_ord = ord(ch) if ord(ch) < 256 else ord("?")
+            h_val = "%02x" % c_ord
+            adv = fontsize * 0.5
+        if f_use != cur_font:
+            _flush()
+            cur_font = f_use
+            run_x = cur_x
+        cur_hex.append(h_val)
+        cur_x += adv
+    _flush()
+
+    ops_str = f"q 0.15 0.39 0.92 rg BT {''.join(ops_parts)}ET Q "
+    # PyMuPDF top-down rectangle for clickable URI link
+    link_rect = (
+        start_x,
+        page_h - (y_pdf - y0_box) - fontsize - 2.0,
+        cur_x,
+        page_h - (y_pdf - y0_box) + 3.0,
+    )
+    return ops_str, link_rect
+
+
+def append_promo_to_pdf_file(
+    pdf_path: str,
+    lang_out: str,
+    font_path: str = "",
+) -> None:
+    """Append the localized AiReadCode promotional footer to the last page of a PDF file on disk."""
+    if not pdf_path or not os.path.exists(pdf_path):
+        return
+    try:
+        import pymupdf as _fitz
+
+        if not font_path or not os.path.exists(font_path):
+            font_path = download_remote_fonts((lang_out or "zh").lower())
+        text = get_promo_text(lang_out)
+        with _fitz.open(pdf_path) as doc:
+            if len(doc) == 0:
+                return
+            page = doc[-1]
+            font = Font(NOTO_NAME, font_path)
+            page.insert_font(fontname=NOTO_NAME, fontfile=font_path)
+            fontsize = 8.5
+            tw = font.text_length(text, fontsize=fontsize)
+            avail_w = max(80.0, float(page.rect.width) - 24.0)
+            if tw > avail_w and tw > 0:
+                fontsize = max(5.5, fontsize * (avail_w / tw) * 0.96)
+                tw = font.text_length(text, fontsize=fontsize)
+            x = float(page.rect.x0) + max(12.0, (float(page.rect.width) - tw) / 2.0)
+            y = float(page.rect.y1) - 10.0
+            page.insert_text(
+                (x, y),
+                text,
+                fontsize=fontsize,
+                fontname=NOTO_NAME,
+                color=(0.15, 0.39, 0.92),
+            )
+            page.insert_link(
+                {
+                    "kind": _fitz.LINK_URI,
+                    "from": _fitz.Rect(x, y - fontsize - 2.0, x + tw, y + 3.0),
+                    "uri": PROMO_URL,
+                }
+            )
+            try:
+                doc.subset_fonts(fallback=True)
+            except Exception:
+                pass
+            tmp_out = f"{pdf_path}.promo.tmp"
+            doc.save(tmp_out, deflate=True, garbage=3)
+        os.replace(tmp_out, pdf_path)
+    except Exception as exc:
+        logger.debug("append_promo_to_pdf_file skipped: %s", exc)
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -473,6 +647,37 @@ def translate_stream(
     obj_patch: dict = translate_patch(fp, **locals())
     if perf:
         perf.step("page_processing")
+
+    if obj_patch and page_count > 0:
+        try:
+            target_pno = page_count - 1
+            target_xref = None
+            for pno in range(page_count - 1, -1, -1):
+                for c_xref in doc_zh[pno].get_contents():
+                    if c_xref in obj_patch:
+                        target_pno = pno
+                        target_xref = c_xref
+                        break
+                if target_xref is not None:
+                    break
+            if target_xref is None:
+                target_xref = list(obj_patch.keys())[-1]
+            promo_ops, link_rect = _build_promo_ops(
+                doc_zh[target_pno], noto, noto_name, lang_out
+            )
+            obj_patch[target_xref] = f"{obj_patch[target_xref]}{promo_ops}"
+            if doc_zh[target_pno].rotation == 0:
+                import pymupdf as _fitz
+
+                doc_zh[target_pno].insert_link(
+                    {
+                        "kind": _fitz.LINK_URI,
+                        "from": _fitz.Rect(*link_rect),
+                        "uri": PROMO_URL,
+                    }
+                )
+        except Exception as exc:
+            logger.debug("Skipping promo footer insertion: %s", exc)
 
     for obj_id, ops_new in obj_patch.items():
         # ops_old=doc_en.xref_stream(obj_id)
