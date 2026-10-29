@@ -317,8 +317,13 @@ def translate_patch(
                 perf.add("layout_extract", perf_counter() - started)
             inf.seek(0)
     pending_pages = []
+    tqdm_file = (
+        sys.stderr
+        if (sys.stderr is not None and hasattr(sys.stderr, "write"))
+        else open(os.devnull, "w", encoding="utf-8")
+    )
     with (
-        tqdm.tqdm(total=total_pages) as progress,
+        tqdm.tqdm(total=total_pages, file=tqdm_file) as progress,
         ThreadPoolExecutor(max_workers=thread) if ultrafast else nullcontext() as pool,
     ):
         if ultrafast:
@@ -451,6 +456,8 @@ def translate_patch(
             assert not device.translation_futures
 
     device.close()
+    if doc_zh is not None:
+        doc_zh._translator = device.translator
     return obj_patch
 
 
@@ -543,6 +550,115 @@ def _ocr_pages(doc, pages, lang_in, cancellation_event):
             )
         ocr_pages.add(pageno)
     return ocr_pages
+
+
+def translate_document_outlines(
+    doc_zh: Document,
+    doc_en: Optional[Document],
+    translator: Any,
+) -> None:
+    """Translate PDF document outline (TOC / bookmarks) for mono and dual documents."""
+    if not doc_zh or not translator:
+        return
+    try:
+        orig_toc = doc_zh.get_toc(simple=False)
+        if not orig_toc:
+            return
+
+        logger.info("Translating PDF document outline (%d items)...", len(orig_toc))
+        unique_titles = list(
+            dict.fromkeys(
+                item[1].strip()
+                for item in orig_toc
+                if len(item) > 1 and item[1] and item[1].strip()
+            )
+        )
+        if not unique_titles:
+            return
+
+        title_map: dict[str, str] = {}
+        for title in unique_titles:
+            try:
+                translated = translator.translate(title)
+                if translated and translated.strip():
+                    title_map[title] = translated.strip()
+                else:
+                    title_map[title] = title
+            except Exception as e:
+                logger.warning("Failed to translate outline title %r: %s", title, e)
+                title_map[title] = title
+
+        # Update doc_zh (mono)
+        zh_toc = []
+        for item in orig_toc:
+            new_item = list(item)
+            t = item[1].strip() if item[1] else ""
+            if t in title_map:
+                new_item[1] = title_map[t]
+            zh_toc.append(new_item)
+        doc_zh.set_toc(zh_toc)
+
+        # Update doc_en (dual)
+        if doc_en:
+            dual_toc = doc_en.get_toc(simple=False)
+            if dual_toc:
+                new_dual_toc = []
+                for item in dual_toc:
+                    new_item = list(item)
+                    t = item[1].strip() if item[1] else ""
+                    if t in title_map:
+                        new_item[1] = title_map[t]
+                    new_dual_toc.append(new_item)
+                doc_en.set_toc(new_dual_toc)
+    except Exception as exc:
+        logger.warning("Failed to translate PDF document outline: %s", exc)
+
+
+def translate_pdf_file_outlines(file_path: str, translator: Any) -> None:
+    """Translate document outlines in an existing PDF file on disk."""
+    if not file_path or not os.path.exists(file_path) or not translator:
+        return
+    try:
+        doc = Document(file_path)
+        orig_toc = doc.get_toc(simple=False)
+        if not orig_toc:
+            doc.close()
+            return
+
+        unique_titles = list(
+            dict.fromkeys(
+                item[1].strip()
+                for item in orig_toc
+                if len(item) > 1 and item[1] and item[1].strip()
+            )
+        )
+        if not unique_titles:
+            doc.close()
+            return
+
+        title_map = {}
+        for t in unique_titles:
+            try:
+                res = translator.translate(t)
+                title_map[t] = res.strip() if res and res.strip() else t
+            except Exception:
+                title_map[t] = t
+
+        new_toc = []
+        for item in orig_toc:
+            new_item = list(item)
+            t = item[1].strip() if item[1] else ""
+            if t in title_map:
+                new_item[1] = title_map[t]
+            new_toc.append(new_item)
+
+        doc.set_toc(new_toc)
+        tmp_path = file_path + ".tmp_toc.pdf"
+        doc.save(tmp_path, deflate=True, garbage=3)
+        doc.close()
+        os.replace(tmp_path, file_path)
+    except Exception as exc:
+        logger.warning("Failed to translate outline in %s: %s", file_path, exc)
 
 
 def translate_stream(
@@ -693,6 +809,10 @@ def translate_stream(
         doc_en.move_page(page_count + id, id * 2 + 1)
     if perf:
         perf.step("bilingual_assembly")
+
+    translator = getattr(doc_zh, "_translator", None)
+    if translator:
+        translate_document_outlines(doc_zh, doc_en, translator)
     if not (skip_subset_fonts or ultrafast):
         try:
             doc_zh.subset_fonts(fallback=True)
@@ -785,12 +905,25 @@ def translate(
     if not files:
         raise PDFValueError("No files to process.")
 
+    if model is None and not ultrafast:
+        from pdf2zh.doclayout import ModelInstance, OnnxModel
+
+        if ModelInstance.value is None:
+            ModelInstance.value = OnnxModel.load_available()
+        model = ModelInstance.value
+
     missing_files = check_files(files)
 
     if missing_files:
-        print("The following files do not exist:", file=sys.stderr)
-        for file in missing_files:
-            print(f"  {file}", file=sys.stderr)
+        err_stream = (
+            sys.stderr
+            if (sys.stderr is not None and hasattr(sys.stderr, "write"))
+            else None
+        )
+        if err_stream:
+            print("The following files do not exist:", file=err_stream)
+            for file in missing_files:
+                print(f"  {file}", file=err_stream)
         raise PDFValueError("Some files do not exist.")
 
     result_files = []

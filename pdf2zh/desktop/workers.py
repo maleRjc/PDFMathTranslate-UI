@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 from PySide6.QtCore import QThread, Signal
 
+from pdf2zh import ensure_valid_std_streams
 from pdf2zh.config import ConfigManager
 from pdf2zh.desktop.metadata import (
      SERVICE_MAP,
@@ -171,6 +172,7 @@ class TranslationQueueWorker(QThread):
                 ModelInstance.value = OnnxModel.load_available()
 
     def run(self) -> None:
+        ensure_valid_std_streams()
         AppSettings.apply_runtime_settings()
 
         log_handler = QtLogHandler(self._emit_log)
@@ -389,7 +391,11 @@ class TranslationQueueWorker(QThread):
         from babeldoc.main import create_progress_handler
         from babeldoc.translation_config import TranslationConfig as YadtConfig
         from pdf2zh.converter_docx import convert_to_pdf, is_convertible
-        from pdf2zh.high_level import append_promo_to_pdf_file, download_remote_fonts
+        from pdf2zh.high_level import (
+            append_promo_to_pdf_file,
+            download_remote_fonts,
+            translate_pdf_file_outlines,
+        )
         from pdf2zh.translator import OpenAITranslator
 
         babeldoc_init()
@@ -468,6 +474,7 @@ class TranslationQueueWorker(QThread):
 
         for out_p in (mono_res, dual_res):
             if out_p and os.path.exists(out_p):
+                translate_pdf_file_outlines(out_p, translator)
                 append_promo_to_pdf_file(out_p, lang_out, font_path)
 
         return mono_res, dual_res

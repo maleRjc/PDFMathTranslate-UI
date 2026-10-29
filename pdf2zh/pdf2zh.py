@@ -107,6 +107,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parse_params.add_argument(
         "--desktop",
+        "--ui",
         "-g",
         action="store_true",
         help="Launch native desktop GUI (PySide6).",

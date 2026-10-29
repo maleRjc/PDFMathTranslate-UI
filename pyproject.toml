@@ -37,6 +37,7 @@ dependencies = [
     "fontTools",
     "babeldoc>=0.1.22, <0.3.0",
     "rich",
+    "PySide6",
 ]
 
 [project.optional-dependencies]
@@ -82,6 +83,7 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 pdf2zh = "pdf2zh.pdf2zh:main"
+pdf2zh-ui = "pdf2zh.desktop_ui:main"
 pdf2zh-gui = "pdf2zh.desktop_ui:main"
 pdf2zh-setup-precise = "pdf2zh.kernel.precise:setup_precise_cli"
 

@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pdf2zh import __version__
+from pdf2zh import __version__, ensure_valid_std_streams
 from pdf2zh.desktop.i18n import (
     UI_LANGUAGES,
     I18nManager,
@@ -1139,6 +1139,7 @@ class MainWindow(QMainWindow):
 
 def launch_desktop_ui(files: Optional[list[str]] = None) -> int:
     """Launch the native PySide6 desktop application."""
+    ensure_valid_std_streams()
     app = QApplication.instance() or QApplication([])
     app.setApplicationName("PDFMathTranslate")
     app.setApplicationDisplayName("PDFMathTranslate")
