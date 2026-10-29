@@ -41,6 +41,8 @@ jobs:
           draft: false
           prerelease: false
           body: |
+            > **📌 项目来源与开源致谢 (Upstream Attribution)**：本项目衍生自上游开源项目 [PDFMathTranslate/PDFMathTranslate](https://github.com/PDFMathTranslate/PDFMathTranslate)，在其核心学术 PDF 翻译引擎基础上进行了原生桌面客户端（PySide6 UI）改造与排版增强，继续遵循 AGPL-3.0 开源协议。
+
             ## ✨ 新增功能与改进 (Highlights)
             1. **原生跨平台桌面客户端 (PySide6 Desktop UI)**
                - 内置 **24 种主流 AI 大模型与机器翻译服务商**可视化配置（DeepSeek、OpenAI、Gemini、阿里云百炼 Qwen-MT、硅基流动、智谱 GLM、ModelScope、Ollama 本地模型、自定义 OpenAI 兼容接口等），支持一键测试连接与设为默认。
@@ -56,3 +58,4 @@ jobs:
             dist/release/*.whl
             dist/release/*.tar.gz
             dist/release/SHA256SUMS-python.txt
+

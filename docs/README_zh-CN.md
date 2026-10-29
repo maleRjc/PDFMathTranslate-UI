@@ -4,7 +4,7 @@
 
 <img src="./images/banner.png" width="320px"  alt="PDF2ZH"/>  
 
-<h2 id="title">PDFMathTranslate</h2>
+<h2 id="title">PDFMathTranslate-UI（原生桌面增强版）</h2>
 
 <p>
   <!-- PyPI -->
@@ -32,6 +32,22 @@
 <a href="https://trendshift.io/repositories/12424" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12424" alt="Byaidu%2FPDFMathTranslate | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 </div>
+
+> [!IMPORTANT]
+> **📌 项目来源与开源致谢 (Upstream Attribution)**
+>
+> 本仓库（**[maleRjc/PDFMathTranslate-UI](https://github.com/maleRjc/PDFMathTranslate-UI)**）衍生自上游开源项目 **[PDFMathTranslate/PDFMathTranslate](https://github.com/PDFMathTranslate/PDFMathTranslate)**，在其核心学术 PDF 翻译引擎基础上进行了原生桌面客户端（PySide6 UI）改造与排版增强，继续遵循相同的 [AGPL-3.0 开源协议](../LICENSE)。衷心感谢原作者 [@Byaidu](https://github.com/Byaidu) 及所有上游贡献者！
+
+---
+
+## 🖥️ 本项目新增与改进特性
+
+1. **原生桌面客户端 (`PySide6` Native Desktop UI)**：内置拖拽批量任务队列、实时进度日志与高清 **原文 / 纯译文 (Mono) / 双语对照 (Dual)** 三合一 PDF 阅读器，并提供 [Releases](https://github.com/maleRjc/PDFMathTranslate-UI/releases) 已签名 macOS `.dmg` 安装包。
+2. **24 种 AI 大模型与翻译服务商可视化配置**：支持 DeepSeek、OpenAI、Gemini、阿里云百炼 Qwen-MT、硅基流动、智谱 GLM、ModelScope、Ollama 本地大模型、OpenAI-liked 自定义兼容接口等图形化配置、一键测试连接与设为默认。
+3. **10 国语言界面实时切换与内置使用说明**：完整覆盖简体中文、繁體中文、English、日本語、한국어、Français、Deutsch、Русский、Español、Italiano。
+4. **目录 (TOC) 与跨页程序代码块排版修复**：修复目录引导点与右对齐页码排版错乱问题，以及跨页程序代码块在新页面出现乱码/混排的问题。
+
+---
 
 科学 PDF 文档翻译及双语对照工具
 

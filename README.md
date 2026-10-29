@@ -18,7 +18,7 @@ English | [简体中文](docs/README_zh-CN.md) | [繁體中文](docs/README_zh-T
 
 <img src="./docs/images/banner.png" width="320px"  alt="PDF2ZH"/>
 
-<h2 id="title">PDFMathTranslate</h2>
+<h2 id="title">PDFMathTranslate-UI (Desktop Edition)</h2>
 
 <p>
   <!-- PyPI -->
@@ -47,6 +47,41 @@ English | [简体中文](docs/README_zh-CN.md) | [繁體中文](docs/README_zh-T
 <a href="https://trendshift.io/repositories/19816" target="_blank"><img src="https://trendshift.io/api/badge/repositories/19816" alt="PDFMathTranslate%2FPDFMathTranslate | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 </div>
+
+> [!IMPORTANT]
+> **📌 项目来源与开源致谢 / Upstream Attribution**
+>
+> - 本仓库（**[maleRjc/PDFMathTranslate-UI](https://github.com/maleRjc/PDFMathTranslate-UI)**）衍生自上游开源项目 **[PDFMathTranslate/PDFMathTranslate](https://github.com/PDFMathTranslate/PDFMathTranslate)**，在其核心学术 PDF 翻译引擎基础上进行了原生桌面客户端（PySide6 UI）改造与排版增强，继续遵循 [AGPL-3.0 开源协议](./LICENSE)。衷心感谢原作者 [@Byaidu](https://github.com/Byaidu) 及所有上游贡献者！
+> - This repository (**[maleRjc/PDFMathTranslate-UI](https://github.com/maleRjc/PDFMathTranslate-UI)**) is derived from the upstream open-source project **[PDFMathTranslate/PDFMathTranslate](https://github.com/PDFMathTranslate/PDFMathTranslate)**, adding a native cross-platform desktop UI (`PySide6`) and layout enhancements for Table of Contents & code blocks. Special thanks to [@Byaidu](https://github.com/Byaidu) and all upstream contributors! Licensed under [AGPL-3.0](./LICENSE).
+
+---
+
+## 🖥️ 本项目相比上游新增功能 / What's New in `PDFMathTranslate-UI`
+
+1. **原生跨平台桌面客户端 (`PySide6` Native Desktop App)**
+   - 提供原生桌面 UI（无需打开浏览器），内置拖拽批量任务队列、实时进度日志与高清 **原文 / 纯译文 (Mono) / 双语对照 (Dual)** 三合一 PDF 预览器。
+   - 可直接在 **[Releases 页面](https://github.com/maleRjc/PDFMathTranslate-UI/releases)** 下载经过 **Apple Developer ID 证书签名** 的 macOS 安装包（`.dmg` / `.zip`），或通过命令行 `pdf2zh --ui` / `pdf2zh-ui` 启动。
+2. **24 种 AI 大模型与机器翻译服务商可视化配置面板**
+   - 内置 **DeepSeek**、**OpenAI**、**Gemini**、**阿里云百炼 Qwen-MT**、**硅基流动 (SiliconFlow)**、**智谱 GLM**、**ModelScope**、**Ollama 本地模型**、**OpenAI-liked 自定义兼容接口**、**Bing / Google / DeepL** 等 24 种服务商图形化配置，支持 API Key 显隐切换、一键连接测试与设为默认服务。
+3. **10 国语言界面实时无缝切换 (Real-time 10-Language UI)**
+   - 界面与内置交互式《使用说明》完整覆盖项目支持的全部 10 种语言：**简体中文 (`zh`)**、**繁體中文 (`zh-TW`)**、**English (`en`)**、**日本語 (`ja`)**、**한국어 (`ko`)**、**Français (`fr`)**、**Deutsch (`de`)**、**Русский (`ru`)**、**Español (`es`)**、**Italiano (`it`)**。
+4. **全面开放排版、输出与系统高级设置**
+   - 支持图形化配置引擎模式（`fast` / `ultrafast` / `babeldoc` / `precise`）、公式保护字体正则 (`vfont` / `vchar`)、自定义大模型提示词 (Prompt)、OCR 识别参数、网络代理 (`HTTP_PROXY`)、SQLite 翻译缓存清理与配置文件导入/导出。
+5. **PDF 目录 (TOC) 与跨页程序代码块排版修复**
+   - **目录排版修复**：自动识别带引导点（`. . . . 42`）及宽间距目录行，逐行独立排版，动态裁剪/延展引导点并保持右侧页码原坐标精确对齐。
+   - **程序代码块防乱码**：自动隔离跨页提示（`continued from previous page` / `continues on next page`），将带行号或语法高亮的代码行作为原子整体原位保留，解决新页面程序代码混排乱码问题。
+
+### 🚀 桌面端快速启动 / Quick Start (Desktop UI)
+```bash
+# 方式一：直接从 Releases 下载已签名的 macOS 安装包 (.dmg)
+# https://github.com/maleRjc/PDFMathTranslate-UI/releases
+
+# 方式二：从源码安装并启动原生桌面端
+pip install -e .
+pdf2zh-ui          # 或运行 pdf2zh --ui / 双击 启动PDF翻译桌面版.command
+```
+
+---
 
 <h2 id="updates">1. What does this do?</h2>
 
