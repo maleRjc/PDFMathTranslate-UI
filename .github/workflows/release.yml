@@ -33,6 +33,32 @@ jobs:
           cd dist/release
           sha256sum *.whl *.tar.gz > SHA256SUMS-python.txt
 
+      - name: Fetch locally signed macOS release assets (if pushed on release-assets branch)
+        continue-on-error: true
+        run: |
+          git fetch origin release-assets:refs/remotes/origin/release-assets || true
+          if git rev-parse --verify origin/release-assets >/dev/null 2>&1; then
+            mkdir -p /tmp/signed_assets
+            git archive origin/release-assets | tar -x -C /tmp/signed_assets
+            if ls /tmp/signed_assets/PDFMathTranslate-*.dmg.part* >/dev/null 2>&1; then
+              cat /tmp/signed_assets/PDFMathTranslate-*.dmg.part* > dist/release/PDFMathTranslate-v1.9.12-macOS-arm64.dmg
+            fi
+            if ls /tmp/signed_assets/PDFMathTranslate-*.zip.part* >/dev/null 2>&1; then
+              cat /tmp/signed_assets/PDFMathTranslate-*.zip.part* > dist/release/PDFMathTranslate-v1.9.12-macOS-arm64.zip
+            fi
+            if [ -f /tmp/signed_assets/pdf2zh-1.9.12-py3-none-any.whl ]; then
+              cp /tmp/signed_assets/pdf2zh-1.9.12-py3-none-any.whl dist/release/
+            fi
+            if [ -f /tmp/signed_assets/pdf2zh-1.9.12.tar.gz ]; then
+              cp /tmp/signed_assets/pdf2zh-1.9.12.tar.gz dist/release/
+            fi
+            if [ -f /tmp/signed_assets/SHA256SUMS.txt ]; then
+              cp /tmp/signed_assets/SHA256SUMS.txt dist/release/SHA256SUMS.txt
+              rm -f dist/release/SHA256SUMS-python.txt
+            fi
+            ls -lh dist/release/
+          fi
+
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -54,8 +80,17 @@ jobs:
                - 自动识别带引导点（`. . . . 42`）及宽间距目录行，逐行独立排版，动态裁剪/延展引导点并保持右侧页码原坐标精确对齐。
             4. **跨页程序代码块防乱码与行号保护**
                - 自动隔离跨页提示（`continued from previous page` / `continues on next page`），将带行号或语法高亮的程序代码行作为原子整体原位保留，彻底解决新页面程序代码混排乱码问题。
+            5. **支持多语言推广页脚与可点击链接**
+               - 生成的 PDF 末尾支持多语言对应推广语与超链接。
+
+            ## 📦 发行包说明 (Release Assets)
+            - **`PDFMathTranslate-v1.9.12-macOS-arm64.dmg`**：macOS (Apple Silicon) 独立安装包，已使用 **Apple Developer ID Application** 证书签名。
+            - **`PDFMathTranslate-v1.9.12-macOS-arm64.zip`**：macOS 便携版 `.app` 压缩包（已签名）。
+            - **`pdf2zh-1.9.12-py3-none-any.whl` / `pdf2zh-1.9.12.tar.gz`**：Python 安装包与源码包。
           files: |
+            dist/release/*.dmg
+            dist/release/*.zip
             dist/release/*.whl
             dist/release/*.tar.gz
-            dist/release/SHA256SUMS-python.txt
+            dist/release/SHA256SUMS*
 
