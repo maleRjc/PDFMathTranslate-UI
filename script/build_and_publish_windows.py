@@ -139,8 +139,8 @@ def prepare_stage_directory() -> None:
         ignore=shutil.ignore_patterns(
             "__pycache__",
             "*.pyc",
-            "*.dist-info",
             "__editable___pdf2zh*",
+            "_virtualenv*",
         ),
     )
 
@@ -156,6 +156,11 @@ def prepare_stage_directory() -> None:
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
     )
 
+    # Copy app icon
+    icon_src = PROJECT_ROOT / "assets" / "app_icon.ico"
+    if icon_src.exists():
+        shutil.copy2(icon_src, STAGE_DIR / "app_icon.ico")
+
     # Copy PyStand launchers
     pystand_dir = DEP_BUILD_DIR / "PyStand"
     gui_exe = pystand_dir / "PyStand-x64-GUI" / "PyStand.exe"
@@ -164,30 +169,50 @@ def prepare_stage_directory() -> None:
     shutil.copy2(gui_exe, STAGE_DIR / "PDFMathTranslate.exe")
     shutil.copy2(cli_exe, STAGE_DIR / "pdf2zh.exe")
 
-    # PyStand initialization scripts
+    # PyStand initialization scripts with explicit sys.path setup and error handling
+    int_prefix = (
+        "import sys\n"
+        "import os\n"
+        "import multiprocessing\n"
+        "base_dir = os.path.dirname(os.path.abspath(__file__))\n"
+        "site_dir = os.path.join(base_dir, 'site-packages')\n"
+        "if site_dir not in sys.path:\n"
+        "    sys.path.insert(0, site_dir)\n"
+        "if base_dir not in sys.path:\n"
+        "    sys.path.insert(0, base_dir)\n"
+    )
+
     gui_int = STAGE_DIR / "PDFMathTranslate.int"
     gui_int.write_text(
-        "import sys\n"
-        "import multiprocessing\n"
-        "from pdf2zh import ensure_valid_std_streams\n"
-        "from pdf2zh.desktop_ui import main\n\n"
-        "if __name__ == '__main__':\n"
-        "    multiprocessing.freeze_support()\n"
-        "    ensure_valid_std_streams()\n"
-        "    sys.exit(main())\n",
+        int_prefix
+        + "try:\n"
+        + "    from pdf2zh import ensure_valid_std_streams\n"
+        + "    ensure_valid_std_streams()\n"
+        + "    from pdf2zh.desktop_ui import main\n"
+        + "    if __name__ == '__main__':\n"
+        + "        multiprocessing.freeze_support()\n"
+        + "        sys.exit(main())\n"
+        + "except Exception as e:\n"
+        + "    import traceback, ctypes\n"
+        + "    err_msg = traceback.format_exc()\n"
+        + "    try:\n"
+        + "        with open(os.path.join(base_dir, 'error.log'), 'w', encoding='utf-8') as f:\n"
+        + "            f.write(err_msg)\n"
+        + "    except Exception: pass\n"
+        + "    ctypes.windll.user32.MessageBoxW(0, f'PDFMathTranslate 启动失败:\\n\\n{err_msg}', 'PDFMathTranslate 错误', 0x10)\n"
+        + "    sys.exit(1)\n",
         encoding="utf-8",
     )
 
     cli_int = STAGE_DIR / "pdf2zh.int"
     cli_int.write_text(
-        "import sys\n"
-        "import multiprocessing\n"
-        "from pdf2zh import ensure_valid_std_streams\n"
-        "from pdf2zh.pdf2zh import main\n\n"
-        "if __name__ == '__main__':\n"
-        "    multiprocessing.freeze_support()\n"
-        "    ensure_valid_std_streams()\n"
-        "    sys.exit(main())\n",
+        int_prefix
+        + "from pdf2zh import ensure_valid_std_streams\n"
+        + "from pdf2zh.pdf2zh import main\n\n"
+        + "if __name__ == '__main__':\n"
+        + "    multiprocessing.freeze_support()\n"
+        + "    ensure_valid_std_streams()\n"
+        + "    sys.exit(main())\n",
         encoding="utf-8",
     )
 
